@@ -1,4 +1,3 @@
-
 import * as _ from 'lodash';
 import { IHeaders, ISecurity } from '../types';
 
@@ -16,7 +15,7 @@ export class NTLMSecurity implements ISecurity {
         username: username,
         password: password,
         domain: domain,
-        workstation: workstation,
+        workstation: workstation
       };
     }
   }

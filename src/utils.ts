@@ -1,4 +1,3 @@
-
 import * as crypto from 'crypto';
 
 export function passwordDigest(nonce: string, created: string, password: string): string {
@@ -8,7 +7,7 @@ export function passwordDigest(nonce: string, created: string, password: string)
   const NonceBytes = Buffer.from(nonce || '', 'base64');
   const CreatedBytes = Buffer.from(created || '', 'utf8');
   const PasswordBytes = Buffer.from(password || '', 'utf8');
-  const FullBytes = Buffer.concat([NonceBytes, CreatedBytes, PasswordBytes ]);
+  const FullBytes = Buffer.concat([NonceBytes, CreatedBytes, PasswordBytes]);
 
   pwHash.update(FullBytes);
   return pwHash.digest('base64');
@@ -24,7 +23,9 @@ export const TNS_PREFIX = '__tns__'; // Prefix for targetNamespace
  */
 export function findPrefix(xmlnsMapping, nsURI) {
   for (const n in xmlnsMapping) {
-    if (n === TNS_PREFIX) { continue; }
+    if (n === TNS_PREFIX) {
+      continue;
+    }
     if (xmlnsMapping[n] === nsURI) {
       return n;
     }
@@ -35,7 +36,7 @@ export function splitQName<T>(nsName: T) {
   if (typeof nsName !== 'string') {
     return {
       prefix: TNS_PREFIX,
-      name: nsName,
+      name: nsName
     };
   }
 
@@ -45,6 +46,6 @@ export function splitQName<T>(nsName: T) {
 
   return {
     prefix: topLevelName.substring(0, prefixOffset) || TNS_PREFIX,
-    name: topLevelName.substring(prefixOffset + 1),
+    name: topLevelName.substring(prefixOffset + 1)
   };
 }

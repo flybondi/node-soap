@@ -1,4 +1,3 @@
-
 import { v4 as uuid4 } from 'uuid';
 import { SignedXml } from 'xml-crypto';
 import { ISecurity } from '../types';
@@ -8,9 +7,20 @@ function addMinutes(date: Date, minutes: number) {
 }
 
 function dateStringForSOAP(date: Date): string {
-  return date.getUTCFullYear() + '-' + ('0' + (date.getUTCMonth() + 1)).slice(-2) + '-' +
-    ('0' + date.getUTCDate()).slice(-2) + 'T' + ('0' + date.getUTCHours()).slice(-2) + ':' +
-    ('0' + date.getUTCMinutes()).slice(-2) + ':' + ('0' + date.getUTCSeconds()).slice(-2) + 'Z';
+  return (
+    date.getUTCFullYear() +
+    '-' +
+    ('0' + (date.getUTCMonth() + 1)).slice(-2) +
+    '-' +
+    ('0' + date.getUTCDate()).slice(-2) +
+    'T' +
+    ('0' + date.getUTCHours()).slice(-2) +
+    ':' +
+    ('0' + date.getUTCMinutes()).slice(-2) +
+    ':' +
+    ('0' + date.getUTCSeconds()).slice(-2) +
+    'Z'
+  );
 }
 
 function generateCreated(): string {
@@ -48,7 +58,8 @@ export class WSSecurityCert implements ISecurity {
 
   constructor(privatePEM: any, publicP12PEM: any, password: any, options?: IWSSecurityCertOptions) {
     options = options || {};
-    this.publicP12PEM = publicP12PEM.toString()
+    this.publicP12PEM = publicP12PEM
+      .toString()
       .replace('-----BEGIN CERTIFICATE-----', '')
       .replace('-----END CERTIFICATE-----', '')
       .replace(/(\r\n|\n|\r)/gm, '');
@@ -59,23 +70,31 @@ export class WSSecurityCert implements ISecurity {
       this.signer.addReference(
         '//*[name(.)="soap:Body"]',
         ['http://www.w3.org/2001/10/xml-exc-c14n#'],
-        'http://www.w3.org/2001/04/xmlenc#sha256',
+        'http://www.w3.org/2001/04/xmlenc#sha256'
       );
     }
     this.signer.signingKey = {
       key: privatePEM,
-      passphrase: password,
+      passphrase: password
     };
     this.x509Id = `x509-${generateId()}`;
     this.hasTimeStamp = typeof options.hasTimeStamp === 'undefined' ? true : !!options.hasTimeStamp;
-    this.signatureTransformations = Array.isArray(options.signatureTransformations) ? options.signatureTransformations
-      : ['http://www.w3.org/2000/09/xmldsig#enveloped-signature', 'http://www.w3.org/2001/10/xml-exc-c14n#'];
+    this.signatureTransformations = Array.isArray(options.signatureTransformations)
+      ? options.signatureTransformations
+      : [
+          'http://www.w3.org/2000/09/xmldsig#enveloped-signature',
+          'http://www.w3.org/2001/10/xml-exc-c14n#'
+        ];
 
     this.signer.keyInfoProvider = {};
-    this.signer.keyInfoProvider.getKeyInfo = (key) => {
-      return `<wsse:SecurityTokenReference>` +
-        `<wsse:Reference URI="#${this.x509Id}" ValueType="${oasisBaseUri}/oasis-200401-wss-x509-token-profile-1.0#X509v3"/>` +
-        `</wsse:SecurityTokenReference>`;
+    this.signer.keyInfoProvider.getKeyInfo = key => {
+      return (
+        `<wsse:SecurityTokenReference>` +
+        `<wsse:Reference URI="#${
+          this.x509Id
+        }" ValueType="${oasisBaseUri}/oasis-200401-wss-x509-token-profile-1.0#X509v3"/>` +
+        `</wsse:SecurityTokenReference>`
+      );
     };
   }
 
@@ -87,19 +106,19 @@ export class WSSecurityCert implements ISecurity {
     if (this.hasTimeStamp) {
       timestampStr =
         `<Timestamp xmlns="${oasisBaseUri}/oasis-200401-wss-wssecurity-utility-1.0.xsd" Id="_1">` +
-          `<Created>${this.created}</Created>` +
-          `<Expires>${this.expires}</Expires>` +
+        `<Created>${this.created}</Created>` +
+        `<Expires>${this.expires}</Expires>` +
         `</Timestamp>`;
     }
 
     const secHeader =
       `<wsse:Security xmlns:wsse="${oasisBaseUri}/oasis-200401-wss-wssecurity-secext-1.0.xsd" ` +
-          `xmlns:wsu="${oasisBaseUri}/oasis-200401-wss-wssecurity-utility-1.0.xsd" ` +
-          `soap:mustUnderstand="1">` +
+      `xmlns:wsu="${oasisBaseUri}/oasis-200401-wss-wssecurity-utility-1.0.xsd" ` +
+      `soap:mustUnderstand="1">` +
       `<wsse:BinarySecurityToken ` +
-          `EncodingType="${oasisBaseUri}/oasis-200401-wss-soap-message-security-1.0#Base64Binary" ` +
-          `ValueType="${oasisBaseUri}/oasis-200401-wss-x509-token-profile-1.0#X509v3" ` +
-          `wsu:Id="${this.x509Id}">${this.publicP12PEM}</wsse:BinarySecurityToken>` +
+      `EncodingType="${oasisBaseUri}/oasis-200401-wss-soap-message-security-1.0#Base64Binary" ` +
+      `ValueType="${oasisBaseUri}/oasis-200401-wss-x509-token-profile-1.0#X509v3" ` +
+      `wsu:Id="${this.x509Id}">${this.publicP12PEM}</wsse:BinarySecurityToken>` +
       timestampStr +
       `</wsse:Security>`;
 
@@ -108,17 +127,24 @@ export class WSSecurityCert implements ISecurity {
     const references = this.signatureTransformations;
 
     const bodyXpath = `//*[name(.)='${envelopeKey}:Body']`;
-    if (!(this.signer.references.filter((ref) => (ref.xpath === bodyXpath)).length > 0)) {
+    if (!(this.signer.references.filter(ref => ref.xpath === bodyXpath).length > 0)) {
       this.signer.addReference(bodyXpath, references);
     }
 
     const timestampXpath = `//*[name(.)='wsse:Security']/*[local-name(.)='Timestamp']`;
-    if (this.hasTimeStamp && !(this.signer.references.filter((ref) => (ref.xpath === timestampXpath)).length > 0)) {
+    if (
+      this.hasTimeStamp &&
+      !(this.signer.references.filter(ref => ref.xpath === timestampXpath).length > 0)
+    ) {
       this.signer.addReference(timestampXpath, references);
     }
 
     this.signer.computeSignature(xmlWithSec);
 
-    return insertStr(this.signer.getSignatureXml(), xmlWithSec, xmlWithSec.indexOf('</wsse:Security>'));
+    return insertStr(
+      this.signer.getSignatureXml(),
+      xmlWithSec,
+      xmlWithSec.indexOf('</wsse:Security>')
+    );
   }
 }

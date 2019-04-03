@@ -820,7 +820,7 @@ export class WSDL {
                   }
 
                   if (childNsURI && childNsPrefix) {
-                    if (nsContext.declareNamespace(childNsPrefix, childNsURI)) {
+                    if (nsContext.declareNamespace(childNsPrefix, childNsURI) && xmlnsAttrib.indexOf('xmlns:' + childNsPrefix) === -1) {
                       childXmlnsAttrib = ' xmlns:' + childNsPrefix + '="' + childNsURI + '"';
                       xmlnsAttrib += childXmlnsAttrib;
                     }

@@ -58,7 +58,7 @@ export class Client extends EventEmitter {
 
   private wsdl: WSDL;
   private httpClient: HttpClient;
-  private soapHeaders: string[];
+  private soapHeaders: any[];
   private httpHeaders: IHeaders;
   private bodyAttributes: string[];
   private endpoint: string;
@@ -82,13 +82,11 @@ export class Client extends EventEmitter {
   }
 
   /** add soapHeader to soap:Header node */
-  public addSoapHeader(soapHeader: any, name?: string, namespace?: string, xmlns?: string): number {
+  public addSoapHeader(soapHeader: any, name?: string, namespace?: any, xmlns?: string): number {
     if (!this.soapHeaders) {
       this.soapHeaders = [];
     }
-    if (typeof soapHeader === 'object') {
-      soapHeader = this.wsdl.objectToXML(soapHeader, name, namespace, xmlns, true);
-    }
+    soapHeader = this._processSoapHeader(soapHeader, name, namespace, xmlns);
     return this.soapHeaders.push(soapHeader) - 1;
   }
 
@@ -102,9 +100,7 @@ export class Client extends EventEmitter {
     if (!this.soapHeaders) {
       this.soapHeaders = [];
     }
-    if (typeof soapHeader === 'object') {
-      soapHeader = this.wsdl.objectToXML(soapHeader, name, namespace, xmlns, true);
-    }
+    soapHeader = this._processSoapHeader(soapHeader, name, namespace, xmlns);
     this.soapHeaders[index] = soapHeader;
   }
 
@@ -266,6 +262,28 @@ export class Client extends EventEmitter {
     };
   }
 
+  private _processSoapHeader(soapHeader, name, namespace, xmlns) {
+    switch (typeof soapHeader) {
+      case 'object':
+        return this.wsdl.objectToXML(soapHeader, name, namespace, xmlns, true);
+      case 'function':
+        const _this = this;
+        // arrow function does not support arguments variable
+        // tslint:disable-next-line
+        return function() {
+          const result = soapHeader.apply(null, arguments);
+
+          if (typeof result === 'object') {
+            return _this.wsdl.objectToXML(result, name, namespace, xmlns, true);
+          } else {
+            return result;
+          }
+        };
+      default:
+        return soapHeader;
+    }
+  }
+
   private _invoke(
     method: OperationElement,
     args,
@@ -411,6 +429,19 @@ export class Client extends EventEmitter {
         input.$type || input.$lookupType
       );
     }
+
+    let decodedHeaders;
+    if (this.soapHeaders) {
+      decodedHeaders = this.soapHeaders
+        .map(header => {
+          if (typeof header === 'function') {
+            return header(method, location, soapAction, args);
+          } else {
+            return header;
+          }
+        })
+        .join('\n');
+    }
     xml =
       '<?xml version="1.0" encoding="utf-8"?>' +
       '<' +
@@ -422,11 +453,11 @@ export class Client extends EventEmitter {
       encoding +
       this.wsdl.xmlnsInEnvelope +
       '>' +
-      (this.soapHeaders || this.security
+      (decodedHeaders || this.security
         ? '<' +
           envelopeKey +
           ':Header>' +
-          (this.soapHeaders ? this.soapHeaders.join('\n') : '') +
+          (decodedHeaders ? decodedHeaders : '') +
           (this.security && !this.security.postProcess ? this.security.toXML() : '') +
           '</' +
           envelopeKey +
